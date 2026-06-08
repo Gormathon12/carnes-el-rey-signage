@@ -3,6 +3,10 @@
 Lectura (items, version) es publica para que las TV puedan consultar sin token.
 Escritura (subir, editar, borrar, reordenar, renombrar) requiere admin.
 """
+import os
+import shutil
+import tempfile
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -107,26 +111,78 @@ async def add_item(
     db: Session = Depends(get_db),
     _admin: str = Depends(require_admin),
 ):
-    """Sube un archivo a Cloudinary y lo agrega al final de la playlist."""
+    """Sube un archivo a la playlist.
+
+    Para videos grandes, los comprime con ffmpeg antes de subir a Cloudinary
+    (asi entran en el limite de 100 MB del plan gratis y pesan menos en las TVs).
+    """
     screen = _get_screen_or_404(db, screen_id)
 
     media_type = media.classify(file.filename or "")
     if media_type is None:
         raise HTTPException(
             status_code=400,
-            detail="Formato no soportado. Solo JPG, PNG o MP4.",
+            detail="Formato no soportado. Imagenes JPG/PNG o videos MP4.",
         )
 
-    file_bytes = await file.read()
-    if not file_bytes:
-        raise HTTPException(status_code=400, detail="El archivo esta vacio")
-    if len(file_bytes) > media.MAX_FILE_BYTES:
-        raise HTTPException(status_code=413, detail="El archivo supera los 100 MB")
-
+    # Guardamos la subida en un archivo temporal en disco (no en memoria), para
+    # poder manejar videos grandes sin saturar la RAM del contenedor.
+    suffix = os.path.splitext(file.filename or "")[1] or ".bin"
+    tmp_paths: list[str] = []
     try:
-        uploaded = media.upload(file_bytes, file.filename, screen_id, media_type)
-    except Exception as exc:  # noqa: BLE001 - reportamos cualquier fallo de Cloudinary
-        raise HTTPException(status_code=502, detail=f"Error subiendo a Cloudinary: {exc}")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            source_path = tmp.name
+        tmp_paths.append(source_path)
+
+        size = os.path.getsize(source_path)
+        if size == 0:
+            raise HTTPException(status_code=400, detail="El archivo esta vacio")
+        if size > media.MAX_FILE_BYTES:
+            mb = media.MAX_FILE_BYTES // (1024 * 1024)
+            raise HTTPException(status_code=413, detail=f"El archivo supera los {mb} MB")
+
+        upload_path = source_path
+
+        # Comprimir videos grandes (si ffmpeg esta disponible).
+        if media_type == "video" and size > media.COMPRESS_THRESHOLD_BYTES:
+            if media.ffmpeg_available():
+                try:
+                    compressed = media.compress_video(source_path)
+                    tmp_paths.append(compressed)
+                    upload_path = compressed
+                except Exception as exc:  # noqa: BLE001
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"No se pudo optimizar el video: {exc}",
+                    )
+            elif size > media.CLOUDINARY_MAX_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail="El video es muy pesado y no se pudo optimizar. "
+                    "Subi uno mas corto o de menor calidad.",
+                )
+
+        # Verificacion final contra el limite de Cloudinary.
+        if os.path.getsize(upload_path) > media.CLOUDINARY_MAX_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Aun optimizado el archivo supera los 100 MB. "
+                "Probá con un video mas corto.",
+            )
+
+        try:
+            uploaded = media.upload_path(upload_path, screen_id, media_type)
+        except Exception as exc:  # noqa: BLE001 - cualquier fallo de Cloudinary
+            raise HTTPException(
+                status_code=502, detail=f"Error subiendo a Cloudinary: {exc}"
+            )
+    finally:
+        for path in tmp_paths:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
     # El nuevo item va al final.
     max_order = max((i.order_index for i in screen.items), default=-1)

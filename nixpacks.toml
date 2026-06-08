@@ -1,0 +1,4 @@
+# Railway usa nixpacks para construir la app. Agregamos ffmpeg al sistema
+# para poder comprimir los videos antes de subirlos a Cloudinary.
+[phases.setup]
+aptPkgs = ["ffmpeg"]

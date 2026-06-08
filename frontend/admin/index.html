@@ -468,7 +468,10 @@ async function uploadFiles(files) {
   btn.disabled = true;
   let ok = 0;
   for (const file of files) {
-    $("upload-status").textContent = `Subiendo ${file.name}...`;
+    const esVideoGrande = file.size > 90 * 1024 * 1024 && file.type.startsWith("video");
+    $("upload-status").textContent = esVideoGrande
+      ? `Optimizando y subiendo ${file.name}... (puede tardar un minuto)`
+      : `Subiendo ${file.name}...`;
     $("upload-status").style.color = "#6b7280";
     const fd = new FormData();
     fd.append("file", file);
