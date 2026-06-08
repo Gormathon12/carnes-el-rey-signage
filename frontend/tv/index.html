@@ -169,42 +169,62 @@
 
   function playCurrent() {
     if (!playlist.length) return;
+    if (imageTimer) { clearTimeout(imageTimer); imageTimer = null; }
+
     const item = playlist[index];
     const prev = currentEl;
 
     let el;
+    let revealed = false;
+
+    // Muestra el nuevo elemento SOLO cuando ya esta cargado, y recien ahi
+    // oculta el anterior. Asi nunca queda un hueco/pantallazo en blanco.
+    function reveal() {
+      if (revealed) return;
+      revealed = true;
+      el.classList.add("visible");
+      if (prev) {
+        prev.classList.remove("visible");
+        setTimeout(() => prev.remove(), 900); // espera el fade-out
+      }
+      // Para imagenes, el tiempo en pantalla arranca cuando ya se ve.
+      if (item.media_type !== "video") {
+        const seconds = (item.duration && item.duration > 0 ? item.duration : 10) * 1000;
+        imageTimer = setTimeout(next, seconds);
+      }
+    }
+
     if (item.media_type === "video") {
       el = document.createElement("video");
-      el.src = item.url;
+      el.className = "media";
       el.muted = true;
       el.autoplay = true;
       el.playsInline = true;
-      el.className = "media";
+      el.setAttribute("playsinline", "");
+      el.preload = "auto";
+      el.style.backgroundColor = "#000";
+      el.addEventListener("playing", reveal, { once: true });
       el.addEventListener("ended", next, { once: true });
       // Si el video falla al cargar, pasamos al siguiente para no quedar trabados.
       el.addEventListener("error", () => setTimeout(next, 500), { once: true });
+      el.src = item.url;
       stage.appendChild(el);
-      // forzamos reproduccion (algunos webview necesitan play() explicito)
       el.play().catch(() => {});
+      // Respaldo: si 'playing' no dispara (algunos webview), mostrar igual.
+      setTimeout(reveal, 1500);
     } else {
       el = document.createElement("img");
-      el.src = item.url;
       el.className = "media";
+      el.addEventListener("load", reveal, { once: true });
       el.addEventListener("error", () => setTimeout(next, 500), { once: true });
+      el.src = item.url;
       stage.appendChild(el);
-      const seconds = (item.duration && item.duration > 0 ? item.duration : 10) * 1000;
-      imageTimer = setTimeout(next, seconds);
+      if (el.complete) reveal(); // ya estaba en cache
+      // Respaldo por si 'load' no dispara.
+      setTimeout(reveal, 1500);
     }
 
-    // fade-in en el siguiente frame
-    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("visible")));
     currentEl = el;
-
-    // fade-out + remover el anterior
-    if (prev) {
-      prev.classList.remove("visible");
-      setTimeout(() => prev.remove(), 900);
-    }
   }
 
   // Pantalla completa al primer toque/click (los web-kiosk suelen permitirlo).
