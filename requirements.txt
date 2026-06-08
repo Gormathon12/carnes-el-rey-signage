@@ -1,0 +1,3 @@
+# Raiz: Railway/nixpacks detecta Python por este archivo.
+# Las dependencias reales viven en backend/requirements.txt.
+-r backend/requirements.txt

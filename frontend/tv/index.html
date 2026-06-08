@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Carnes el Rey - TV</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    cursor: none;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+    background: #000;
+  }
+  /* Cada media se apila y se hace fade con opacity. */
+  .media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+    background: #000;
+  }
+  .media.visible { opacity: 1; }
+
+  /* Mensajes de estado (sin contenido / error / cargando) */
+  #message {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-family: system-ui, sans-serif;
+    text-align: center;
+    gap: 16px;
+    background: #000;
+  }
+  #message h1 { font-size: 2rem; color: #b71c1c; }
+  #message p { font-size: 1.1rem; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="message">
+  <h1>🥩 Carnes el Rey</h1>
+  <p id="message-text">Cargando pantalla...</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const POLL_INTERVAL_MS = 30000; // chequea cambios cada 30 s
+  const RETRY_MS = 5000;          // reintento si falla la red
+  const params = new URLSearchParams(location.search);
+  const screenId = parseInt(params.get("screen") || "1", 10);
+
+  const stage = document.getElementById("stage");
+  const message = document.getElementById("message");
+  const messageText = document.getElementById("message-text");
+
+  let playlist = [];      // items activos en orden
+  let version = null;     // version conocida
+  let pendingPlaylist = null; // playlist nueva que se aplica al terminar el item actual
+  let index = 0;
+  let currentEl = null;   // elemento <img>/<video> visible
+  let imageTimer = null;
+
+  function showMessage(text) {
+    messageText.textContent = text;
+    message.classList.remove("hidden");
+  }
+  function hideMessage() {
+    message.classList.add("hidden");
+  }
+
+  async function fetchPlaylist() {
+    const res = await fetch(`/playlists/${screenId}/items`, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  async function fetchVersion() {
+    const res = await fetch(`/playlists/${screenId}/version`, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return (await res.json()).version;
+  }
+
+  // Carga inicial de la playlist.
+  async function init() {
+    try {
+      const data = await fetchPlaylist();
+      version = data.version;
+      playlist = data.items || [];
+      if (!playlist.length) {
+        showMessage("Esta pantalla no tiene contenido asignado.");
+        // seguimos haciendo polling por si agregan contenido.
+        setTimeout(init, RETRY_MS);
+        return;
+      }
+      hideMessage();
+      index = 0;
+      playCurrent();
+      startPolling();
+    } catch (e) {
+      showMessage("Sin conexion con el servidor. Reintentando...");
+      setTimeout(init, RETRY_MS);
+    }
+  }
+
+  // Polling de version cada 30 s. Si cambio, guardamos la nueva playlist como
+  // pendiente y se aplica cuando termine el item actual (sin cortes bruscos).
+  function startPolling() {
+    setInterval(async () => {
+      try {
+        const v = await fetchVersion();
+        if (v !== version) {
+          const data = await fetchPlaylist();
+          version = data.version;
+          pendingPlaylist = data.items || [];
+        }
+      } catch (e) {
+        /* ignoramos errores de red puntuales; reintenta en el proximo ciclo */
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  // Aplica la playlist pendiente (si hay) antes de avanzar al siguiente item.
+  function applyPendingIfAny() {
+    if (pendingPlaylist === null) return;
+    playlist = pendingPlaylist;
+    pendingPlaylist = null;
+    index = 0;
+    if (!playlist.length) {
+      cleanupCurrent();
+      showMessage("Esta pantalla no tiene contenido asignado.");
+    } else {
+      hideMessage();
+    }
+  }
+
+  function cleanupCurrent() {
+    if (imageTimer) { clearTimeout(imageTimer); imageTimer = null; }
+    if (currentEl) {
+      const el = currentEl;
+      el.classList.remove("visible");
+      setTimeout(() => el.remove(), 900); // espera el fade-out
+      currentEl = null;
+    }
+  }
+
+  function next() {
+    applyPendingIfAny();
+    if (!playlist.length) return;
+    index = (index + 1) % playlist.length;
+    playCurrent();
+  }
+
+  function playCurrent() {
+    if (!playlist.length) return;
+    const item = playlist[index];
+    const prev = currentEl;
+
+    let el;
+    if (item.media_type === "video") {
+      el = document.createElement("video");
+      el.src = item.url;
+      el.muted = true;
+      el.autoplay = true;
+      el.playsInline = true;
+      el.className = "media";
+      el.addEventListener("ended", next, { once: true });
+      // Si el video falla al cargar, pasamos al siguiente para no quedar trabados.
+      el.addEventListener("error", () => setTimeout(next, 500), { once: true });
+      stage.appendChild(el);
+      // forzamos reproduccion (algunos webview necesitan play() explicito)
+      el.play().catch(() => {});
+    } else {
+      el = document.createElement("img");
+      el.src = item.url;
+      el.className = "media";
+      el.addEventListener("error", () => setTimeout(next, 500), { once: true });
+      stage.appendChild(el);
+      const seconds = (item.duration && item.duration > 0 ? item.duration : 10) * 1000;
+      imageTimer = setTimeout(next, seconds);
+    }
+
+    // fade-in en el siguiente frame
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("visible")));
+    currentEl = el;
+
+    // fade-out + remover el anterior
+    if (prev) {
+      prev.classList.remove("visible");
+      setTimeout(() => prev.remove(), 900);
+    }
+  }
+
+  // Pantalla completa al primer toque/click (los web-kiosk suelen permitirlo).
+  function tryFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement) return;
+    (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el).catch(() => {});
+  }
+  document.addEventListener("click", tryFullscreen);
+  document.addEventListener("keydown", tryFullscreen);
+
+  // Evita que la pantalla se duerma manteniendo actividad (best-effort).
+  if ("wakeLock" in navigator) {
+    const requestWake = () => navigator.wakeLock.request("screen").catch(() => {});
+    requestWake();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") requestWake();
+    });
+  }
+
+  if (screenId < 1 || screenId > 10 || Number.isNaN(screenId)) {
+    showMessage("Numero de pantalla invalido. Usa ?screen=1 hasta ?screen=10");
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

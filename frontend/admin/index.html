@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Carnes el Rey - Administracion</title>
+<style>
+  :root {
+    --rojo: #b71c1c;
+    --rojo-osc: #7f0000;
+    --bg: #f4f4f5;
+    --card: #ffffff;
+    --texto: #1f2937;
+    --gris: #6b7280;
+    --borde: #e5e7eb;
+    --ok: #16a34a;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+  }
+  header {
+    background: var(--rojo);
+    color: #fff;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 1.1rem; margin: 0; }
+  header .sub { font-size: .75rem; opacity: .85; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    background: var(--rojo);
+    color: #fff;
+    transition: filter .15s;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.secundario { background: #e5e7eb; color: var(--texto); }
+  button.peligro { background: #dc2626; }
+  button.fantasma { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.6); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  input, select {
+    font: inherit;
+    padding: 9px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    width: 100%;
+    background: #fff;
+    color: var(--texto);
+  }
+
+  /* Login */
+  #login {
+    max-width: 360px;
+    margin: 12vh auto;
+    background: var(--card);
+    padding: 28px 24px;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 30px rgba(0,0,0,.08);
+  }
+  #login h2 { margin: 0 0 4px; color: var(--rojo); }
+  #login p { margin: 0 0 20px; color: var(--gris); font-size: .85rem; }
+  #login label { display: block; font-size: .8rem; margin: 12px 0 4px; font-weight: 600; }
+  #login button { width: 100%; margin-top: 18px; padding: 11px; }
+  .error { color: #dc2626; font-size: .8rem; margin-top: 10px; min-height: 1em; }
+
+  /* Grid de pantallas */
+  main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .screen-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color .15s, transform .1s;
+  }
+  .screen-card:hover { border-color: var(--rojo); transform: translateY(-2px); }
+  .screen-card .num {
+    display: inline-block;
+    background: var(--rojo);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .screen-card h3 { margin: 8px 0 4px; font-size: 1.05rem; }
+  .screen-card .meta { color: var(--gris); font-size: .8rem; }
+  .screen-card .links { margin-top: 10px; font-size: .75rem; }
+  .screen-card .links a { color: var(--rojo); text-decoration: none; }
+
+  /* Vista de detalle */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .toolbar h2 { margin: 0; font-size: 1.2rem; flex: 1 1 auto; }
+  .toolbar .name-edit { display: flex; gap: 6px; align-items: center; flex: 1 1 240px; }
+
+  .uploader {
+    background: var(--card);
+    border: 2px dashed var(--borde);
+    border-radius: var(--radius);
+    padding: 18px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .uploader.drag { border-color: var(--rojo); background: #fff5f5; }
+  .uploader .row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .uploader label.dur { font-size: .8rem; color: var(--gris); display: flex; gap: 6px; align-items: center; }
+  .uploader label.dur input { width: 70px; }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .item.inactivo { opacity: .55; }
+  .item img.thumb {
+    width: 96px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #000;
+    flex: 0 0 auto;
+  }
+  .item .info { flex: 1 1 auto; min-width: 0; }
+  .item .info .tipo {
+    font-size: .68rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #fff;
+    background: var(--gris);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .item .info .tipo.video { background: #2563eb; }
+  .item .info .tipo.image { background: #059669; }
+  .item .info .dur { display: inline-flex; gap: 4px; align-items: center; margin-top: 6px; font-size: .8rem; color: var(--gris); }
+  .item .info .dur input { width: 64px; padding: 4px 6px; }
+  .item .acciones { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
+  .item .acciones button { padding: 5px 8px; font-size: .8rem; }
+  .item .mover { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
+  .item .mover button { padding: 2px 8px; line-height: 1; background: #e5e7eb; color: var(--texto); }
+
+  .vacio { text-align: center; color: var(--gris); padding: 40px; }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111827;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: .85rem;
+    opacity: 0;
+    transition: opacity .2s;
+    pointer-events: none;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; }
+  .toast.err { background: #dc2626; }
+  .hidden { display: none !important; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 480px) {
+    .item img.thumb { width: 72px; height: 40px; }
+    .item .acciones button span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login">
+  <h2>Carnes el Rey</h2>
+  <p>Panel de administracion de pantallas</p>
+  <label for="user">Usuario</label>
+  <input id="user" type="text" autocomplete="username" />
+  <label for="pass">Contrasena</label>
+  <input id="pass" type="password" autocomplete="current-password" />
+  <div class="error" id="login-error"></div>
+  <button id="btn-login">Ingresar</button>
+</section>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <div>
+      <h1>🥩 Carnes el Rey</h1>
+      <div class="sub">Administracion de pantallas</div>
+    </div>
+    <button class="fantasma" id="btn-logout">Salir</button>
+  </header>
+  <main>
+    <!-- Lista de pantallas -->
+    <div id="view-list">
+      <div class="grid" id="screens-grid"></div>
+    </div>
+
+    <!-- Detalle de una pantalla -->
+    <div id="view-detail" class="hidden">
+      <div class="toolbar">
+        <button class="secundario" id="btn-back">← Volver</button>
+        <div class="name-edit">
+          <input id="screen-name" type="text" maxlength="60" />
+          <button id="btn-rename">Guardar</button>
+        </div>
+      </div>
+
+      <div class="uploader" id="uploader">
+        <div><strong>Arrastra archivos aqui</strong> o seleccionalos (JPG, PNG, MP4)</div>
+        <div class="row">
+          <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.mp4" multiple style="width:auto" />
+          <label class="dur">Duracion imagen (s): <input id="upload-dur" type="number" min="1" max="3600" value="10" /></label>
+          <button id="btn-upload">Subir</button>
+        </div>
+        <div class="error" id="upload-status"></div>
+      </div>
+
+      <div id="items-list"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = ""; // mismo origen (FastAPI sirve este HTML)
+let token = localStorage.getItem("cer_token") || null;
+let currentScreen = null;
+
+// ---------- utilidades ----------
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, isErr = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  setTimeout(() => (t.className = "toast"), 2600);
+}
+
+async function api(path, { method = "GET", body = null, isForm = false } = {}) {
+  const headers = {};
+  if (token) headers["Authorization"] = "Bearer " + token;
+  if (!isForm && body) headers["Content-Type"] = "application/json";
+  const res = await fetch(API + path, {
+    method,
+    headers,
+    body: isForm ? body : body ? JSON.stringify(body) : null,
+  });
+  if (res.status === 401) {
+    logout();
+    throw new Error("Sesion expirada, volve a ingresar");
+  }
+  if (!res.ok) {
+    let detail = "Error " + res.status;
+    try { detail = (await res.json()).detail || detail; } catch (_) {}
+    throw new Error(detail);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ---------- login ----------
+async function doLogin() {
+  $("login-error").textContent = "";
+  try {
+    const data = await api("/auth/login", {
+      method: "POST",
+      body: { username: $("user").value.trim(), password: $("pass").value },
+    });
+    token = data.access_token;
+    localStorage.setItem("cer_token", token);
+    showApp();
+  } catch (e) {
+    $("login-error").textContent = e.message;
+  }
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem("cer_token");
+  $("app").classList.add("hidden");
+  $("login").classList.remove("hidden");
+}
+
+function showApp() {
+  $("login").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  showList();
+}
+
+// ---------- lista de pantallas ----------
+async function showList() {
+  $("view-detail").classList.add("hidden");
+  $("view-list").classList.remove("hidden");
+  currentScreen = null;
+  const grid = $("screens-grid");
+  grid.innerHTML = "Cargando...";
+  try {
+    const screens = await api("/playlists");
+    grid.innerHTML = "";
+    screens.forEach((s) => {
+      const card = document.createElement("div");
+      card.className = "screen-card";
+      card.innerHTML = `
+        <span class="num">TV ${s.id}</span>
+        <h3>${escapeHtml(s.name)}</h3>
+        <div class="meta">${s.item_count} elemento(s)</div>
+        <div class="links"><a href="/tv?screen=${s.id}" target="_blank" onclick="event.stopPropagation()">Abrir pantalla ↗</a></div>
+      `;
+      card.onclick = () => showDetail(s.id);
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = `<div class="vacio">${e.message}</div>`;
+  }
+}
+
+// ---------- detalle ----------
+async function showDetail(screenId) {
+  currentScreen = screenId;
+  $("view-list").classList.add("hidden");
+  $("view-detail").classList.remove("hidden");
+  await loadItems();
+}
+
+async function loadItems() {
+  const data = await api(`/playlists/${currentScreen}/items?all=true`);
+  $("screen-name").value = data.name;
+  renderItems(data.items);
+}
+
+function renderItems(items) {
+  const list = $("items-list");
+  if (!items.length) {
+    list.innerHTML = `<div class="vacio">Esta pantalla no tiene elementos todavia.<br>Subi imagenes o videos arriba.</div>`;
+    return;
+  }
+  list.innerHTML = "";
+  items.forEach((it, idx) => {
+    const row = document.createElement("div");
+    row.className = "item" + (it.active ? "" : " inactivo");
+    const durField =
+      it.media_type === "image"
+        ? `<span class="dur">⏱ <input type="number" min="1" max="3600" value="${it.duration}" data-id="${it.id}" class="dur-input" /> s</span>`
+        : `<span class="dur">🎬 dura lo que el video</span>`;
+    row.innerHTML = `
+      <div class="mover">
+        <button ${idx === 0 ? "disabled" : ""} data-up="${it.id}">▲</button>
+        <button ${idx === items.length - 1 ? "disabled" : ""} data-down="${it.id}">▼</button>
+      </div>
+      <img class="thumb" src="${it.thumbnail_url || it.url}" alt="" loading="lazy" />
+      <div class="info">
+        <span class="tipo ${it.media_type}">${it.media_type === "video" ? "Video" : "Imagen"}</span>
+        <div>${durField}</div>
+      </div>
+      <div class="acciones">
+        <button class="secundario" data-toggle="${it.id}">${it.active ? "Ocultar" : "Activar"}</button>
+        <button class="peligro" data-del="${it.id}">Borrar</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  // listeners
+  list.querySelectorAll(".dur-input").forEach((inp) =>
+    inp.addEventListener("change", () => updateItem(inp.dataset.id, { duration: parseFloat(inp.value) }))
+  );
+  list.querySelectorAll("[data-toggle]").forEach((b) =>
+    b.addEventListener("click", () => toggleItem(b.dataset.toggle))
+  );
+  list.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => deleteItem(b.dataset.del))
+  );
+  list.querySelectorAll("[data-up]").forEach((b) =>
+    b.addEventListener("click", () => move(b.dataset.up, -1))
+  );
+  list.querySelectorAll("[data-down]").forEach((b) =>
+    b.addEventListener("click", () => move(b.dataset.down, 1))
+  );
+
+  window._items = items; // cache para reordenar
+}
+
+async function updateItem(id, body) {
+  try {
+    await api(`/playlists/${currentScreen}/items/${id}`, { method: "PUT", body });
+    toast("Guardado");
+  } catch (e) { toast(e.message, true); }
+}
+
+async function toggleItem(id) {
+  const item = window._items.find((i) => i.id == id);
+  await updateItem(id, { active: !item.active });
+  await loadItems();
+}
+
+async function deleteItem(id) {
+  if (!confirm("¿Borrar este elemento? Tambien se elimina de Cloudinary.")) return;
+  try {
+    await api(`/playlists/${currentScreen}/items/${id}`, { method: "DELETE" });
+    toast("Eliminado");
+    await loadItems();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function move(id, dir) {
+  const ids = window._items.map((i) => i.id);
+  const pos = ids.indexOf(Number(id));
+  const next = pos + dir;
+  if (next < 0 || next >= ids.length) return;
+  [ids[pos], ids[next]] = [ids[next], ids[pos]];
+  try {
+    await api(`/playlists/${currentScreen}/reorder`, { method: "PUT", body: { item_ids: ids } });
+    await loadItems();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function rename() {
+  try {
+    await api(`/playlists/${currentScreen}/name`, { method: "PUT", body: { name: $("screen-name").value.trim() } });
+    toast("Nombre actualizado");
+  } catch (e) { toast(e.message, true); }
+}
+
+// ---------- subida ----------
+async function uploadFiles(files) {
+  if (!files.length) return;
+  const dur = parseFloat($("upload-dur").value) || 10;
+  const btn = $("btn-upload");
+  btn.disabled = true;
+  let ok = 0;
+  for (const file of files) {
+    $("upload-status").textContent = `Subiendo ${file.name}...`;
+    $("upload-status").style.color = "#6b7280";
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("duration", dur);
+    try {
+      await api(`/playlists/${currentScreen}/items`, { method: "POST", body: fd, isForm: true });
+      ok++;
+    } catch (e) {
+      $("upload-status").style.color = "#dc2626";
+      $("upload-status").textContent = `Error con ${file.name}: ${e.message}`;
+    }
+  }
+  btn.disabled = false;
+  $("file-input").value = "";
+  if (ok) { $("upload-status").textContent = ""; toast(`${ok} archivo(s) subido(s)`); }
+  await loadItems();
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ---------- eventos globales ----------
+$("btn-login").onclick = doLogin;
+$("pass").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+$("btn-logout").onclick = logout;
+$("btn-back").onclick = showList;
+$("btn-rename").onclick = rename;
+$("btn-upload").onclick = () => uploadFiles([...$("file-input").files]);
+
+const up = $("uploader");
+["dragenter", "dragover"].forEach((ev) =>
+  up.addEventListener(ev, (e) => { e.preventDefault(); up.classList.add("drag"); })
+);
+["dragleave", "drop"].forEach((ev) =>
+  up.addEventListener(ev, (e) => { e.preventDefault(); up.classList.remove("drag"); })
+);
+up.addEventListener("drop", (e) => uploadFiles([...e.dataTransfer.files]));
+
+// arranque
+if (token) showApp(); else $("login").classList.remove("hidden");
+</script>
+</body>
+</html>

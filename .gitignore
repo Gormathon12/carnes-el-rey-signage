@@ -1,0 +1,16 @@
+# Entorno
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Base de datos local
+*.db
+backend/signage.db
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
