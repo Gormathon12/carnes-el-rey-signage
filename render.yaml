@@ -1,0 +1,26 @@
+# Blueprint de Render. Al conectar el repo, Render lee este archivo y crea el
+# servicio web automaticamente. Las variables marcadas sync:false se cargan a
+# mano en el panel (Cloudinary, password, base de datos).
+services:
+  - type: web
+    name: carnes-el-rey-signage
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true

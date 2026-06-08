@@ -100,7 +100,46 @@ uvicorn main:app --reload
 
 ---
 
-## 4) Deploy en Railway
+## 4) Deploy GRATIS en Render + Neon (recomendado)
+
+Opción 100% gratuita y sin que se borren las playlists. Usa tres servicios free:
+**Render** (corre la app), **Neon** (base de datos PostgreSQL) y **Cloudinary**
+(la media, ya configurada en el paso 1).
+
+### 4.1 Base de datos gratis en Neon
+1. Entrá a **https://neon.tech** → **Sign up** (gratis, con GitHub).
+2. Creá un proyecto (cualquier nombre, ej. `carnes-el-rey`).
+3. En el dashboard, copiá la **Connection string** (botón "Connect"). Se ve así:
+   `postgresql://usuario:password@ep-xxxx.neon.tech/neondb?sslmode=require`
+4. Guardala; la vas a pegar en Render como `DATABASE_URL`.
+
+### 4.2 App gratis en Render
+1. Entrá a **https://render.com** → **Sign up** con GitHub.
+2. **New + → Blueprint** → conectá el repo `carnes-el-rey-signage`.
+   Render detecta `render.yaml` y crea el servicio solo.
+   (Alternativa: **New + → Web Service**, runtime Python, start command
+   `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`.)
+3. En **Environment**, cargá las variables:
+   ```
+   CLOUDINARY_CLOUD_NAME = (paso 1)
+   CLOUDINARY_API_KEY    = (paso 1)
+   CLOUDINARY_API_SECRET = (paso 1)
+   DATABASE_URL          = (la connection string de Neon, paso 4.1)
+   ADMIN_USER            = admin
+   ADMIN_PASSWORD        = (tu contraseña)
+   ```
+   (`SECRET_KEY` se genera solo gracias al blueprint.)
+4. **Create** y esperá el build. Te queda una URL tipo
+   `https://carnes-el-rey-signage.onrender.com`.
+
+> ⚠️ En el plan free de Render la app se "duerme" tras ~15 min sin tráfico y
+> tarda ~1 minuto en despertar. Con las TVs prendidas (consultan cada 30 s) se
+> mantiene despierta. Gracias a Neon, **las playlists no se pierden** aunque se
+> duerma o se vuelva a desplegar.
+
+---
+
+## 4-bis) Deploy en Railway (alternativa)
 
 1. Subí este proyecto a un repo de **GitHub** (o usá `railway init` con el CLI).
 2. Entrá a **https://railway.app**, creá una cuenta y hacé **New Project →
