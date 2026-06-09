@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>Carnes el Rey - TV</title>
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg" />
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -47,13 +48,20 @@
   }
   #message h1 { font-size: 2rem; color: #b71c1c; }
   #message p { font-size: 1.1rem; }
+  .message-logo {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: contain;
+  }
   .hidden { display: none !important; }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div id="message">
-  <h1>🥩 Carnes el Rey</h1>
+  <img src="/assets/logo.jpg" alt="Carnes el Rey" class="message-logo" />
   <p id="message-text">Cargando pantalla...</p>
 </div>
 

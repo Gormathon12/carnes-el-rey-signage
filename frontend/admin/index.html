@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Carnes el Rey - Administracion</title>
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg" />
 <style>
   :root {
     --rojo: #b71c1c;
@@ -36,6 +37,23 @@
   }
   header h1 { font-size: 1.1rem; margin: 0; }
   header .sub { font-size: .75rem; opacity: .85; }
+  header .brand { display: flex; align-items: center; gap: 12px; }
+  .header-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+  .login-logo {
+    display: block;
+    width: 130px;
+    height: 130px;
+    margin: 0 auto 6px;
+    border-radius: 50%;
+    object-fit: contain;
+  }
   button {
     font: inherit;
     cursor: pointer;
@@ -217,7 +235,7 @@
 
 <!-- LOGIN -->
 <section id="login">
-  <h2>Carnes el Rey</h2>
+  <img src="/assets/logo.jpg" alt="Carnes el Rey" class="login-logo" />
   <p>Panel de administracion de pantallas</p>
   <label for="user">Usuario</label>
   <input id="user" type="text" autocomplete="username" />
@@ -230,9 +248,12 @@
 <!-- APP -->
 <div id="app" class="hidden">
   <header>
-    <div>
-      <h1>🥩 Carnes el Rey</h1>
-      <div class="sub">Administracion de pantallas</div>
+    <div class="brand">
+      <img src="/assets/logo.jpg" alt="Carnes el Rey" class="header-logo" />
+      <div>
+        <h1>Carnes el Rey</h1>
+        <div class="sub">Administracion de pantallas</div>
+      </div>
     </div>
     <button class="fantasma" id="btn-logout">Salir</button>
   </header>
