@@ -151,6 +151,14 @@
     flex: 0 0 auto;
   }
   .item .info { flex: 1 1 auto; min-width: 0; }
+  .item .info .nombre {
+    font-weight: 600;
+    font-size: .92rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .item .info .tipo {
     font-size: .68rem;
     text-transform: uppercase;
@@ -388,6 +396,7 @@ function renderItems(items) {
       </div>
       <img class="thumb" src="${it.thumbnail_url || it.url}" alt="" loading="lazy" />
       <div class="info">
+        <div class="nombre" title="${escapeHtml(it.name || "")}">${escapeHtml(it.name || (it.media_type === "video" ? "Video sin nombre" : "Imagen sin nombre"))}</div>
         <span class="tipo ${it.media_type}">${it.media_type === "video" ? "Video" : "Imagen"}</span>
         <div>${durField}</div>
       </div>

@@ -46,6 +46,7 @@ class MediaItem(Base):
     screen_id = Column(Integer, ForeignKey("screens.id"), nullable=False, index=True)
 
     media_type = Column(String, nullable=False)  # "image" | "video"
+    name = Column(String, nullable=True)  # nombre original del archivo subido
     url = Column(String, nullable=False)  # URL segura de Cloudinary
     public_id = Column(String, nullable=False)  # id en Cloudinary (para borrar)
     thumbnail_url = Column(String, nullable=True)  # miniatura para el admin
@@ -64,6 +65,7 @@ class MediaItem(Base):
             "id": self.id,
             "screen_id": self.screen_id,
             "media_type": self.media_type,
+            "name": self.name,
             "url": self.url,
             "public_id": self.public_id,
             "thumbnail_url": self.thumbnail_url,

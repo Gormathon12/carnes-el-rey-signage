@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect, text
 
 load_dotenv()
 
@@ -68,9 +69,25 @@ app.include_router(auth.router)
 app.include_router(playlists.router)
 
 
+def ensure_columns():
+    """Migracion liviana: agrega columnas nuevas a tablas ya existentes.
+
+    create_all() no modifica tablas que ya existen, asi que agregamos a mano
+    las columnas nuevas (idempotente). Funciona en SQLite y PostgreSQL.
+    """
+    inspector = inspect(engine)
+    if "media_items" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("media_items")}
+    if "name" not in existing:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN name VARCHAR"))
+
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    ensure_columns()
     seed_screens()
 
 

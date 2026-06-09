@@ -189,6 +189,7 @@ async def add_item(
     item = MediaItem(
         screen_id=screen_id,
         media_type=media_type,
+        name=os.path.basename(file.filename or "") or None,
         url=uploaded["url"],
         public_id=uploaded["public_id"],
         thumbnail_url=uploaded["thumbnail_url"],
